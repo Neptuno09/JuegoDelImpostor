@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego Impostor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .setup-screen {
+            display: block;
+        }
+
+        .game-screen {
+            display: none;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="number"], input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            font-family: Arial;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .player-display {
+            font-size: 3em;
+            color: #333;
+            margin: 40px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 40px 0;
+            padding: 30px;
+            border-radius: 15px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #6c7b95, #8896a8);
+            color: white;
+        }
+
+        .object-display {
+            font-size: 1.8em;
+            margin-top: 20px;
+            font-weight: normal;
+        }
+
+        .progress {
+            margin-top: 30px;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .final-screen {
+            display: none;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #feca57, #ff9ff3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Pantalla de configuración -->
+        <div class="setup-screen" id="setupScreen">
+            <h1>🎭 Juego Impostor</h1>
+            
+            <div class="input-group">
+                <label for="playerNames">Nombres de los jugadores (uno por línea):</label>
+                <textarea id="playerNames" rows="6" placeholder="Luan&#10;Uli&#10;Gonza&#10;Valen&#10;..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="impostorCount">Número de impostores:</label>
+                <input type="number" id="impostorCount" min="1" max="5" value="2">
+            </div>
+            
+            <div class="input-group">
+                <label for="secretObjects">Objetos secretos (uno por línea, se elegirá uno aleatoriamente):</label>
+                <textarea id="secretObjects" rows="4" placeholder="Manzana&#10;Coche&#10;Playa&#10;Perro&#10;...">Manzana&#10;Coche&#10;Playa</textarea>
+            </div>
+            
+            <button onclick="startGame()">Iniciar Juego</button>
+        </div>
+
+        <!-- Pantalla del juego -->
+        <div class="game-screen" id="gameScreen">
+            <div class="player-display" id="playerDisplay">
+                Jugador 1
+            </div>
+            
+            <div class="role-display" id="roleDisplay" style="display: none;">
+                <!-- Aquí se mostrará el rol -->
+            </div>
+            
+            <div class="progress" id="progress">
+                Jugador 1 de 6
+            </div>
+            
+            <button onclick="revealRole()" id="revealBtn">Tocar para ver tu rol</button>
+            <button onclick="nextPlayer()" id="nextBtn" style="display: none;">Siguiente jugador</button>
+        </div>
+
+        <!-- Pantalla final -->
+        <div class="final-screen" id="finalScreen">
+            <h1>🎉 ¡Todos tienen sus roles!</h1>
+            <p style="font-size: 1.3em; margin: 20px 0; color: #555;">
+                Ahora pueden empezar a jugar. Los impostores deben fingir que conocen el objeto secreto.
+            </p>
+            <div style="font-size: 2.5em; font-weight: bold; margin: 30px 0; color: #667eea;" id="firstPlayer">
+                <!-- Aquí aparecerá quién comienza -->
+            </div>
+            <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6;">
+                <p style="font-size: 1.2em; color: #666; margin-bottom: 15px;">
+                    📱 Devolver el celular al anfitrión
+                </p>
+                <button onclick="showImpostors()" id="hostBtn">Ver impostores (solo anfitrión)</button>
+            </div>
+            <div id="impostorsList" style="display: none; margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; border-radius: 10px;">
+                <!-- Aquí aparecerán los impostores -->
+            </div>
+            <button onclick="restartGame()" class="restart-btn">Nuevo Juego</button>
+        </div>
+    </div>
+
+    <script>
+        let gameData = {
+            totalPlayers: 0,
+            impostorCount: 0,
+            secretObject: '',
+            currentPlayer: 1,
+            impostors: [],
+            roleRevealed: false,
+            playerNames: []
+        };
+
+        function startGame() {
+            const playerNamesText = document.getElementById('playerNames').value.trim();
+            const impostorCount = parseInt(document.getElementById('impostorCount').value);
+            const secretObjectsText = document.getElementById('secretObjects').value.trim();
+
+            // Procesar nombres de jugadores
+            const playerNames = playerNamesText.split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+
+            // Procesar objetos secretos
+            const secretObjects = secretObjectsText.split('\n')
+                .map(obj => obj.trim())
+                .filter(obj => obj.length > 0);
+
+            // Validaciones
+            if (playerNames.length < 3) {
+                alert('Necesitas al menos 3 jugadores para jugar');
+                return;
+            }
+
+            if (impostorCount >= playerNames.length) {
+                alert('El número de impostores debe ser menor al número de jugadores');
+                return;
+            }
+
+            if (impostorCount < 1) {
+                alert('Debe haber al menos 1 impostor');
+                return;
+            }
+
+            if (secretObjects.length === 0) {
+                alert('Debes escribir al menos un objeto secreto');
+                return;
+            }
+
+            // Elegir objeto secreto aleatoriamente
+            const selectedObject = secretObjects[Math.floor(Math.random() * secretObjects.length)];
+
+            // Configurar juego
+            gameData.playerNames = playerNames;
+            gameData.totalPlayers = playerNames.length;
+            gameData.impostorCount = impostorCount;
+            gameData.secretObject = selectedObject;
+            gameData.currentPlayer = 1;
+            gameData.roleRevealed = false;
+
+            // Seleccionar impostores aleatoriamente
+            gameData.impostors = [];
+            while (gameData.impostors.length < impostorCount) {
+                const randomPlayer = Math.floor(Math.random() * playerNames.length) + 1;
+                if (!gameData.impostors.includes(randomPlayer)) {
+                    gameData.impostors.push(randomPlayer);
+                }
+            }
+
+            // Cambiar a pantalla de juego con un pequeño delay
+            setTimeout(() => {
+                document.getElementById('setupScreen').style.display = 'none';
+                document.getElementById('gameScreen').style.display = 'block';
+                updateDisplay();
+            }, 100);
+        }
+
+        function updateDisplay() {
+            const currentPlayerName = gameData.playerNames[gameData.currentPlayer - 1];
+            document.getElementById('playerDisplay').textContent = currentPlayerName;
+            document.getElementById('progress').textContent = `${currentPlayerName} (${gameData.currentPlayer} de ${gameData.totalPlayers})`;
+            
+            // Resetear botones
+            document.getElementById('revealBtn').style.display = 'inline-block';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('roleDisplay').style.display = 'none';
+            gameData.roleRevealed = false;
+        }
+
+        function revealRole() {
+            if (gameData.roleRevealed) return;
+
+            const isImpostor = gameData.impostors.includes(gameData.currentPlayer);
+            const roleDisplay = document.getElementById('roleDisplay');
+            
+            if (isImpostor) {
+                roleDisplay.innerHTML = `
+                    <div>🕵️ IMPOSTOR</div>
+                    <div class="object-display">No sabes cuál es el objeto secreto</div>
+                `;
+            } else {
+                roleDisplay.innerHTML = `
+                    <div>👤 JUGADOR INOCENTE</div>
+                    <div class="object-display">El objeto es: ${gameData.secretObject}</div>
+                `;
+            }
+            
+            roleDisplay.style.display = 'flex';
+            document.getElementById('revealBtn').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            gameData.roleRevealed = true;
+        }
+
+        function nextPlayer() {
+            if (!gameData.roleRevealed) return;
+
+            gameData.currentPlayer++;
+            
+            if (gameData.currentPlayer > gameData.totalPlayers) {
+                // Elegir jugador que comienza aleatoriamente
+                const randomStartPlayer = gameData.playerNames[Math.floor(Math.random() * gameData.playerNames.length)];
+                document.getElementById('firstPlayer').textContent = `Comienza ${randomStartPlayer}`;
+                
+                // Juego terminado
+                document.getElementById('gameScreen').style.display = 'none';
+                document.getElementById('finalScreen').style.display = 'block';
+            } else {
+                updateDisplay();
+            }
+        }
+
+        function showImpostors() {
+            const impostorNames = gameData.impostors.map(impostorIndex => 
+                gameData.playerNames[impostorIndex - 1]
+            );
+            
+            const impostorsList = document.getElementById('impostorsList');
+            
+            if (impostorNames.length === 1) {
+                impostorsList.innerHTML = `
+                    <h3 style="margin-bottom: 15px;">🕵️ El impostor es:</h3>
+                    <div style="font-size: 1.8em; font-weight: bold;">${impostorNames[0]}</div>
+                `;
+            } else {
+                impostorsList.innerHTML = `
+                    <h3 style="margin-bottom: 15px;">🕵️ Los impostores son:</h3>
+                    <div style="font-size: 1.8em; font-weight: bold;">${impostorNames.join(' y ')}</div>
+                `;
+            }
+            
+            impostorsList.style.display = 'block';
+            document.getElementById('hostBtn').style.display = 'none';
+        }
+
+        function restartGame() {
+            // Resetear todo completamente
+            gameData = {
+                totalPlayers: 0,
+                impostorCount: 0,
+                secretObject: '',
+                currentPlayer: 1,
+                impostors: [],
+                roleRevealed: false,
+                playerNames: [],
+                selectedObject: ''
+            };
+            
+            // Ocultar pantalla final y mostrar setup
+            document.getElementById('finalScreen').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+            
+            // Resetear también el botón del anfitrión por si acaso
+            document.getElementById('hostBtn').style.display = 'inline-block';
+            document.getElementById('impostorsList').style.display = 'none';
+        }
+
+        // Permitir tocar en cualquier lugar de la pantalla para revelar rol o continuar
+        document.addEventListener('click', function(e) {
+            // Solo funciona si estamos en la pantalla del juego
+            if (document.getElementById('gameScreen').style.display === 'block') {
+                
+                // Evitar que se dispare si el click viene del botón de iniciar juego
+                if (e.target.textContent === 'Iniciar Juego') {
+                    return;
+                }
+                
+                // Si no se ha revelado el rol, revelarlo
+                if (!gameData.roleRevealed && e.target.id !== 'nextBtn') {
+                    revealRole();
+                }
+                // Si ya se reveló el rol, pasar al siguiente jugador
+                else if (gameData.roleRevealed && e.target.id !== 'revealBtn') {
+                    nextPlayer();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
